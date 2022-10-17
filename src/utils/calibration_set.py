@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 
-
 def init_text_field(frame):
     height, width = frame.shape[:2]
     blank_image = np.zeros((height, 300, 3), np.uint8)
@@ -20,8 +19,8 @@ def change_text_field(frame):
 
 
 photo_count = 0
-left_img_filepath = './calibration_images/LEFT/'
-right_img_filepath = './calibration_images/RIGHT/'
+left_img_filepath = 'resources/calibration_images/LEFT/' 
+right_img_filepath = 'resources/calibration_images/RIGHT/'
 
 cv2.namedWindow('Camera calibration')
 
