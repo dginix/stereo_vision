@@ -14,12 +14,15 @@ def init_text_field(frame):
     text = "[c] - clear set"
     cv2.putText(blank_image, text, (20, 100), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 200), 1, cv2.LINE_AA)
 
+    text = "[l] - delete last"
+    cv2.putText(blank_image, text, (20, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 200), 1, cv2.LINE_AA)
+
     return blank_image
 
 
 def change_text_field(frame):
     text = "Photo count: " + str(photo_count)
-    cv2.putText(frame, text, (20, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 200), 1, cv2.LINE_AA)
+    cv2.putText(frame, text, (20, 450), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 200), 1, cv2.LINE_AA)
     return frame
 
 
@@ -78,6 +81,21 @@ while True:
         photo_count = 0
         text_filed = init_text_field(text_filed)
         change_text_field(text_filed)
+
+    elif key == ord('l'):
+        # delete last
+        list_of_files_l = glob.glob(left_img_filepath + '*') # * means all if need specific format then *.csv
+        latest_file_l = max(list_of_files_l, key=os.path.getctime)
+        os.remove(latest_file_l)
+
+        list_of_files_r = glob.glob(right_img_filepath + '*') # * means all if need specific format then *.csv
+        latest_file_r = max(list_of_files_r, key=os.path.getctime)
+        os.remove(latest_file_r)
+
+        photo_count -= 1
+        text_filed = init_text_field(text_filed)
+        change_text_field(text_filed)
+
 
     elif key == 27:
         break
