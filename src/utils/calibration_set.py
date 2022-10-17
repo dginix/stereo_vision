@@ -1,5 +1,7 @@
 import cv2
 import numpy as np
+import os
+import glob
 
 def init_text_field(frame):
     height, width = frame.shape[:2]
@@ -9,18 +11,27 @@ def init_text_field(frame):
     text = "[SPACE] - take photo"
     cv2.putText(blank_image, text, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 200), 1, cv2.LINE_AA)
 
+    text = "[c] - clear set"
+    cv2.putText(blank_image, text, (20, 100), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 200), 1, cv2.LINE_AA)
+
     return blank_image
 
 
 def change_text_field(frame):
     text = "Photo count: " + str(photo_count)
-    cv2.putText(frame, text, (70, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 200), 1, cv2.LINE_AA)
+    cv2.putText(frame, text, (20, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 200), 1, cv2.LINE_AA)
     return frame
 
 
 photo_count = 0
 left_img_filepath = 'resources/calibration_images/LEFT/' 
 right_img_filepath = 'resources/calibration_images/RIGHT/'
+
+if not os.path.exists(left_img_filepath):
+    os.mkdir(left_img_filepath)
+
+if not os.path.exists(right_img_filepath):
+    os.mkdir(right_img_filepath)
 
 cv2.namedWindow('Camera calibration')
 
@@ -52,6 +63,21 @@ while True:
 
         filename = right_img_filepath + 'r_' + str(photo_count) + '.jpg'
         cv2.imwrite(filename, frame_right)
+
+    elif key == ord('c'):
+        # clear photo set
+        files_l = glob.glob(left_img_filepath + '*')
+        files_r = glob.glob(right_img_filepath + '*')
+
+        for file in files_l:
+            os.remove(file)
+
+        for file in files_r:
+            os.remove(file)
+
+        photo_count = 0
+        text_filed = init_text_field(text_filed)
+        change_text_field(text_filed)
 
     elif key == 27:
         break
