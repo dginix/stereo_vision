@@ -3,6 +3,7 @@ import numpy as np
 import os
 import glob
 
+
 def init_text_field(frame):
     height, width = frame.shape[:2]
     blank_image = np.zeros((height, 300, 3), np.uint8)
