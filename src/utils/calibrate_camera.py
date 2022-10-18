@@ -20,7 +20,7 @@ def showImgMonoCalibrate(origImg, C, D, imgShape, name):
 
 
 
-def stereo_calibrate(right_dir, left_dir, image_format = "jpg", square_size=0.03, width=7, height=5):
+def stereo_calibrate(right_dir, left_dir, image_format = "jpg", square_size=1, width=7, height=5):
 
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
@@ -95,46 +95,52 @@ def stereo_calibrate(right_dir, left_dir, image_format = "jpg", square_size=0.03
     print(good_count, err_count)
 
     mse1, C1, D1, R1, T1 = cv2.calibrateCamera(objpoints, imgpoints_left, imgShape, 
-                        None, None, flags=0)
+                        None, None)
+
     mse2, C2, D2, R2, T2 = cv2.calibrateCamera(objpoints, imgpoints_right, imgShape, 
-                        None, None, flags=0)
+                        None, None)
 
-
-    testImgLeft = cv2.imread('./resources/calibration_images/LEFT/l_1.jpg')
-    testImgRight = cv2.imread('./resources/calibration_images/RIGHT/r_1.jpg')
+    testImgLeft = cv2.imread(left_images[0])
+    testImgRight = cv2.imread(left_images[0])
 
     #show new images
     showImgMonoCalibrate(testImgLeft, C1, D1, imgShape, "left")
 
     stereoFlags = 0
-    #stereoFlags |= cv2.CALIB_FIX_INTRINSIC
+    stereoFlags |= cv2.CALIB_FIX_INTRINSIC
     #stereoFlags |= cv2.CALIB_USE_INTRINSIC_GUESS
-    # flags |= cv2.CALIB_FIX_PRINCIPAL_POINT
-    #stereoFlags |= cv2.CALIB_USE_INTRINSIC_GUESS
-    #stereoFlags |= cv2.CALIB_FIX_FOCAL_LENGTH
-    # flags |= cv2.CALIB_FIX_ASPECT_RATIO
-    #stereoFlags |= cv2.CALIB_ZERO_TANGENT_DIST
-    # flags |= cv2.CALIB_RATIONAL_MODEL
-    # flags |= cv2.CALIB_SAME_FOCAL_LENGTH
-    # flags |= cv2.CALIB_FIX_K3
-    # flags |= cv2.CALIB_FIX_K4
-    # flags |= cv2.CALIB_FIX_K5
+    # stereoFlags |= cv2.CALIB_FIX_PRINCIPAL_POINT
+    # stereoFlags |= cv2.CALIB_FIX_FOCAL_LENGTH
+    # stereoFlags |= cv2.CALIB_FIX_ASPECT_RATIO
+    # stereoFlags |= cv2.CALIB_ZERO_TANGENT_DIST
+    # stereoFlags |= cv2.CALIB_RATIONAL_MODEL
+    # stereoFlags |= cv2.CALIB_SAME_FOCAL_LENGTH
+    # stereoFlags |= cv2.CALIB_FIX_K3
+    # stereoFlags |= cv2.CALIB_FIX_K4
+    # stereoFlags |= cv2.CALIB_FIX_K5
 
-    stereocalib_criteria = (cv2.TERM_CRITERIA_MAX_ITER +
-                            cv2.TERM_CRITERIA_EPS, 100, 1e-5)
+    stereocalibCriteria = (cv2.TERM_CRITERIA_MAX_ITER +
+                            cv2.TERM_CRITERIA_EPS, 1000, 1e-5)
 
     mseTotal, CL, DL, CR, DR, R, T, E, F = cv2.stereoCalibrate(objpoints, imgpoints_left, imgpoints_right, C1, D1, C2, D2, imgShape, 
-        flags = stereoFlags, criteria=stereocalib_criteria)
+        flags=stereoFlags, criteria=stereocalibCriteria)
 
-    RL, RR, PL, PR, Q, validROIL, validROIR = cv2.stereoRectify(CL, DL, CR, DR, imgShape, R, T, alpha=0.8)
+    print(mseTotal)
+
+    RL, RR, PL, PR, Q, validROIL, validROIR = cv2.stereoRectify(CL, DL, CR, DR, imgShape, R, T,
+        flags=cv2.CALIB_ZERO_DISPARITY, 
+        alpha=0.55,
+        )
 
     undistL, rectifL = cv2.initUndistortRectifyMap(CL, DL, RL, PL, imgShape, cv2.CV_32FC1)
     undistR, rectifR = cv2.initUndistortRectifyMap(CR, DR, RR, PR, imgShape, cv2.CV_32FC1)
 
-    trueImgLeft = cv2.remap(testImgLeft, undistL, rectifL, cv2.INTER_LINEAR)
-    trueImgRight = cv2.remap(testImgRight, undistR, rectifR, cv2.INTER_LINEAR)
+    trueImgLeft = cv2.remap(testImgLeft, undistL, rectifL, cv2.INTER_LINEAR, cv2.BORDER_CONSTANT)
+    trueImgRight = cv2.remap(testImgRight, undistR, rectifR, cv2.INTER_LINEAR, cv2.BORDER_CONSTANT)
 
     conc_frame = np.concatenate((trueImgLeft, trueImgRight), axis=1)
+    for i in range(0, conc_frame.shape[0], int(conc_frame.shape[0]/15)):
+        cv2.line(conc_frame, (0,i), (conc_frame.shape[1],i), (255,0,0), 1)
     cv2.imshow('Camera calibration', conc_frame)
     cv2.waitKey(0)
 
