@@ -41,6 +41,13 @@ cv2.namedWindow('Camera calibration')
 
 cam_right = cv2.VideoCapture(0)
 cam_left = cv2.VideoCapture(2)
+
+cam_right.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+cam_right.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+
+cam_left.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+cam_left.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+
 check, frame_right = cam_right.read()
 text_filed = init_text_field(frame_right)
 
