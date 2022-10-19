@@ -59,6 +59,7 @@ while True:
     cv2.putText(frame_right, 'R', (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 200), 1, cv2.LINE_AA)
 
     conc_frame = np.concatenate((frame_left, frame_right, text_filed), axis=1)
+    conc_frame = cv2.resize(conc_frame, (1800, 470))
 
     cv2.imshow('Camera calibration', conc_frame)
     key = cv2.waitKey(1)
