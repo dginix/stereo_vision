@@ -1,168 +1,137 @@
 import numpy as np
-import cv2
+import cv2 as cv
 import glob
-import argparse
-import sys
-
-
-def showImgMonoCalibrate(origImg, C, D, imgShape, name):
-    newcameramtx, testRoi = cv2.getOptimalNewCameraMatrix(C, D, imgShape, 1, imgShape)
-
-    # undistort
-    mapx, mapy = cv2.initUndistortRectifyMap(C, D, None, newcameramtx, imgShape, 5)
-    result = cv2.remap(origImg, mapx, mapy, cv2.INTER_LINEAR)
-
-    cv2.imshow('original {name}', origImg)
-    cv2.imshow('remap {name}', result)
 
 
 
-def stereo_calibrate(right_dir, left_dir, image_format = "jpg", square_size=1, width=9, height=6):
+################ FIND CHESSBOARD CORNERS - OBJECT POINTS AND IMAGE POINTS #############################
 
-    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
-
-    pattern_size = (width, height)  # Chessboard size!
-
-    # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(8,6,0)
-    objp = np.zeros((height * width, 3), np.float32)
-    objp[:, :2] = np.mgrid[0:width, 0:height].T.reshape(-1, 2)
-    objp = objp * square_size  # Create real world coords. Use your metric.
-
-    # Arrays to store object points and image points from all the images.
-    objpoints = []  # 3d point in real world space
-    imgpoints_left = []  # 2d points in image plane.
-    imgpoints_right = []  # 2d points in image plane.
-
-    err_count = 0  # chessboard not founded
-    good_count = 0  # chessboard founded
-
-    if left_dir[-1:] == '/':
-        left_dir = left_dir[:-1]
-
-    if right_dir[-1:] == '/':
-        right_dir = right_dir[:-1]
-
-    left_images = glob.glob(left_dir + '/' + '*.' + image_format)
-    right_images = glob.glob(right_dir + '/' + '*.' + image_format)
-
-    left_images.sort()
-    right_images.sort()
-
-    imgShape = cv2.imread(left_images[0]).shape[1::-1]
-
-    print(imgShape)
-
-    if len(left_images) != len(right_images):
-        print("Numbers of left and right images are not equal. They should be pairs.")
-        print("Left images count: ", len(left_images))
-        print("Right images count: ", len(right_images))
-        sys.exit(-1)
-
-    pair_images = zip(left_images, right_images)
-
-    for left_img, right_img in pair_images:
-        right = cv2.imread(right_img)
-        gray_right = cv2.cvtColor(right, cv2.COLOR_BGR2GRAY)
-        ret_right, corners_right = cv2.findChessboardCorners(gray_right, pattern_size,
-                                                             cv2.CALIB_CB_ADAPTIVE_THRESH | cv2.CALIB_CB_NORMALIZE_IMAGE)
-
-        left = cv2.imread(left_img)
-        gray_left = cv2.cvtColor(left, cv2.COLOR_BGR2GRAY)
-        ret_left, corners_left = cv2.findChessboardCorners(gray_left, pattern_size,
-                                                           cv2.CALIB_CB_ADAPTIVE_THRESH | cv2.CALIB_CB_NORMALIZE_IMAGE)
-
-        if ret_left and ret_right:  # If both image is okay. Otherwise we explain which pair has a problem and continue
-            # Object points
-            objpoints.append(objp)
-
-            # Right points
-            corners_right2 = cv2.cornerSubPix(gray_right, corners_right, (5, 5), (-1, -1), criteria)
-            imgpoints_right.append(corners_right2)
-
-            # Left points
-            corners_left2 = cv2.cornerSubPix(gray_left, corners_left, (5, 5), (-1, -1), criteria)
-            imgpoints_left.append(corners_left2)
-
-            good_count += 1
-        else:
-            print("Chessboard couldn't detected. Image pair: ", left_img, " and ", right_img)
-            err_count += 1
-            continue
-
-    print(good_count, err_count)
-
-    mse1, C1, D1, R1, T1 = cv2.calibrateCamera(objpoints, imgpoints_left, imgShape, 
-                        None, None)
-
-    C1, testRoi = cv2.getOptimalNewCameraMatrix(C1, D1, imgShape, 0, imgShape)
+chessboardSize = (9,6)
+frameSize = (1280,720)
 
 
-    mse2, C2, D2, R2, T2 = cv2.calibrateCamera(objpoints, imgpoints_right, imgShape, 
-                        None, None)
 
-    C2, testRoi = cv2.getOptimalNewCameraMatrix(C2, D2, imgShape, 0, imgShape)
-
-    print(mse1, mse2)
-
-    testImgLeft = cv2.imread(left_images[0])
-    testImgRight = cv2.imread(left_images[0])
-
-    #show new images
-    showImgMonoCalibrate(testImgLeft, C1, D1, imgShape, "left")
-
-    stereoFlags = 0
-    # stereoFlags |= cv2.CALIB_FIX_INTRINSIC
-    stereoFlags |= cv2.CALIB_USE_INTRINSIC_GUESS
-    stereoFlags |= cv2.CALIB_FIX_PRINCIPAL_POINT
-    stereoFlags |= cv2.CALIB_FIX_FOCAL_LENGTH
-    stereoFlags |= cv2.CALIB_FIX_ASPECT_RATIO
-    stereoFlags |= cv2.CALIB_ZERO_TANGENT_DIST
-    stereoFlags |= cv2.CALIB_RATIONAL_MODEL
-    stereoFlags |= cv2.CALIB_SAME_FOCAL_LENGTH
-    stereoFlags |= cv2.CALIB_FIX_K3
-    stereoFlags |= cv2.CALIB_FIX_K4
-    stereoFlags |= cv2.CALIB_FIX_K5
-    stereoFlags |= cv2.CALIB_FIX_K6
-
-    stereocalibCriteria = (cv2.TERM_CRITERIA_MAX_ITER +
-                            cv2.TERM_CRITERIA_EPS, 1000, 1e-5)
-
-    mseTotal, CL, DL, CR, DR, R, T, E, F = cv2.stereoCalibrate(objpoints, imgpoints_left, imgpoints_right, C1, D1, C2, D2, imgShape, 
-        flags=stereoFlags, criteria=stereocalibCriteria)
-
-    # mseTotal, CL, DL, CR, DR, R, T, E, F = cv2.stereoCalibrate(objpoints, imgpoints_left, imgpoints_right, C1, D1, C2, D2, imgShape)
-
-    print(mseTotal)
-
-    RL, RR, PL, PR, Q, validROIL, validROIR = cv2.stereoRectify(CL, DL, CR, DR, imgShape, R, T,
-        flags=cv2.CALIB_ZERO_DISPARITY, 
-        alpha=0.5,
-        )
-
-    undistL, rectifL = cv2.initUndistortRectifyMap(CL, DL, RL, PL, imgShape, cv2.CV_32FC1)
-    undistR, rectifR = cv2.initUndistortRectifyMap(CR, DR, RR, PR, imgShape, cv2.CV_32FC1)
-
-    trueImgLeft = cv2.remap(testImgLeft, undistL, rectifL, cv2.INTER_LINEAR, cv2.BORDER_CONSTANT)
-    trueImgRight = cv2.remap(testImgRight, undistR, rectifR, cv2.INTER_LINEAR, cv2.BORDER_CONSTANT)
-
-    conc_frame = np.concatenate((trueImgLeft, trueImgRight), axis=1)
-    for i in range(0, conc_frame.shape[0], int(conc_frame.shape[0]/15)):
-        cv2.line(conc_frame, (0,i), (conc_frame.shape[1],i), (255,0,0), 1)
-    cv2.imshow('Camera calibration', conc_frame)
-    cv2.waitKey(0)
+# termination criteria
+criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
 
-right_coef_path = "./calibration_data/right_coefs/right.yml"
-left_coef_path = "./calibration_data/left_coefs/left.yml"
-stereo_coef_path = "./calibration_data/stereo_coefs/stereo.yml"
-
-right_imgs_path = "./resources/calibration_images/LEFT"
-left_imgs_path = "./resources/calibration_images/LEFT"
-
-square_size = 0.03
-chess_width = 7
-chess_height = 5
-
-stereo_calibrate(right_dir=right_imgs_path, left_dir=left_imgs_path)
+# prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
+objp = np.zeros((chessboardSize[0] * chessboardSize[1], 3), np.float32)
+objp[:,:2] = np.mgrid[0:chessboardSize[0],0:chessboardSize[1]].T.reshape(-1,2)
 
 
+# Arrays to store object points and image points from all the images.
+objpoints = [] # 3d point in real world space
+imgpointsL = [] # 2d points in image plane.
+imgpointsR = [] # 2d points in image plane.
+
+
+imagesLeft = glob.glob('resources/calibration_images/LEFT/*.png')
+imagesRight = glob.glob('resources/calibration_images/RIGHT/*.png')
+
+imagesLeft.sort()
+imagesRight.sort()
+
+for imgLeft, imgRight in zip(imagesLeft, imagesRight):
+
+    imgL = cv.imread(imgLeft)
+    imgR = cv.imread(imgRight)
+    grayL = cv.cvtColor(imgL, cv.COLOR_BGR2GRAY)
+    grayR = cv.cvtColor(imgR, cv.COLOR_BGR2GRAY)
+
+    # Find the chess board corners
+    retL, cornersL = cv.findChessboardCorners(grayL, chessboardSize, None)
+    retR, cornersR = cv.findChessboardCorners(grayR, chessboardSize, None)
+
+    # If found, add object points, image points (after refining them)
+    if retL and retR == True:
+
+        objpoints.append(objp)
+
+        cornersL = cv.cornerSubPix(grayL, cornersL, (11,11), (-1,-1), criteria)
+        imgpointsL.append(cornersL)
+
+        cornersR = cv.cornerSubPix(grayR, cornersR, (11,11), (-1,-1), criteria)
+        imgpointsR.append(cornersR)
+
+        # Draw and display the corners
+        cv.drawChessboardCorners(imgL, chessboardSize, cornersL, retL)
+        cv.imshow('img left', imgL)
+        cv.drawChessboardCorners(imgR, chessboardSize, cornersR, retR)
+        cv.imshow('img right', imgR)
+        cv.waitKey(1000)
+
+
+cv.destroyAllWindows()
+
+
+
+
+############## CALIBRATION #######################################################
+
+retL, cameraMatrixL, distL, rvecsL, tvecsL = cv.calibrateCamera(objpoints, imgpointsL, frameSize, None, None)
+heightL, widthL, channelsL = imgL.shape
+newCameraMatrixL, roi_L = cv.getOptimalNewCameraMatrix(cameraMatrixL, distL, (widthL, heightL), 1, (widthL, heightL))
+
+retR, cameraMatrixR, distR, rvecsR, tvecsR = cv.calibrateCamera(objpoints, imgpointsR, frameSize, None, None)
+heightR, widthR, channelsR = imgR.shape
+newCameraMatrixR, roi_R = cv.getOptimalNewCameraMatrix(cameraMatrixR, distR, (widthR, heightR), 1, (widthR, heightR))
+
+
+
+########## Stereo Vision Calibration #############################################
+
+flags = 0
+flags |= cv.CALIB_FIX_INTRINSIC
+# Here we fix the intrinsic camara matrixes so that only Rot, Trns, Emat and Fmat are calculated.
+# Hence intrinsic parameters are the same 
+
+criteria_stereo= (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+
+# This step is performed to transformation between the two cameras and calculate Essential and Fundamenatl matrix
+retStereo, newCameraMatrixL, distL, newCameraMatrixR, distR, rot, trans, essentialMatrix, fundamentalMatrix = cv.stereoCalibrate(objpoints, imgpointsL, imgpointsR, newCameraMatrixL, distL, newCameraMatrixR, distR, grayL.shape[::-1], criteria_stereo, flags)
+
+#print(newCameraMatrixL)
+#print(newCameraMatrixR)
+
+########## Stereo Rectification #################################################
+
+rectifyScale= 1
+rectL, rectR, projMatrixL, projMatrixR, Q, roi_L, roi_R= cv.stereoRectify(newCameraMatrixL, distL, newCameraMatrixR, distR, grayL.shape[::-1], rot, trans, rectifyScale,(0,0))
+
+stereoMapL = cv.initUndistortRectifyMap(newCameraMatrixL, distL, rectL, projMatrixL, grayL.shape[::-1], cv.CV_16SC2)
+stereoMapR = cv.initUndistortRectifyMap(newCameraMatrixR, distR, rectR, projMatrixR, grayR.shape[::-1], cv.CV_16SC2)
+
+print("Saving parameters!")
+cv_file = cv.FileStorage('resources/stereoMap.xml', cv.FILE_STORAGE_WRITE)
+
+cv_file.write('stereoMapL_x',stereoMapL[0])
+cv_file.write('stereoMapL_y',stereoMapL[1])
+cv_file.write('stereoMapR_x',stereoMapR[0])
+cv_file.write('stereoMapR_y',stereoMapR[1])
+
+cv_file.release()
+
+
+testLeft = cv.imread(imagesLeft[0])
+testRight = cv.imread(imagesRight[0])
+
+# Applying stereo image rectification on the left image
+Left_nice= cv.remap(testLeft,
+            stereoMapL[0],
+            stereoMapL[1],
+            cv.INTER_LANCZOS4,
+            cv.BORDER_CONSTANT,
+            0)
+    
+# Applying stereo image rectification on the right image
+Right_nice= cv.remap(testRight,
+            stereoMapR[0],
+            stereoMapR[1],
+            cv.INTER_LANCZOS4,
+            cv.BORDER_CONSTANT,
+            0)
+
+cv.imshow('Left_nice', Left_nice)
+cv.imshow('Right_nice', Right_nice)
+cv.waitKey(0)

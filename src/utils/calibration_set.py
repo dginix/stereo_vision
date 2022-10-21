@@ -70,10 +70,10 @@ while True:
         text_filed = init_text_field(text_filed)
         change_text_field(text_filed)
 
-        filename = left_img_filepath + 'l_' + str(photo_count) + '.jpg'
+        filename = left_img_filepath + 'imageL' + str(photo_count) + '.png'
         cv2.imwrite(filename, frame_left)
 
-        filename = right_img_filepath + 'r_' + str(photo_count) + '.jpg'
+        filename = right_img_filepath + 'imageL' + str(photo_count) + '.png'
         cv2.imwrite(filename, frame_right)
 
     elif key == ord('c'):
