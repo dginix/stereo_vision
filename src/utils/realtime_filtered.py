@@ -13,9 +13,11 @@ CamR= cv2.VideoCapture(CamR_id)
 
 CamL.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
 CamL.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+CamL.set(cv2.CAP_PROP_AUTOFOCUS, 0)
 
 CamR.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
 CamR.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+CamR.set(cv2.CAP_PROP_AUTOFOCUS, 0)
  
 # Reading the mapping values for stereo image rectification
 cv_file = cv2.FileStorage("resources/stereoMap.xml", cv2.FILE_STORAGE_READ)
