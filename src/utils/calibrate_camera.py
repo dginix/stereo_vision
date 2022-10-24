@@ -59,7 +59,7 @@ for imgLeft, imgRight in zip(imagesLeft, imagesRight):
         cv.imshow('img left', imgL)
         cv.drawChessboardCorners(imgR, chessboardSize, cornersR, retR)
         cv.imshow('img right', imgR)
-        cv.waitKey(1000)
+        cv.waitKey(15)
 
 
 cv.destroyAllWindows()
@@ -132,6 +132,12 @@ Right_nice= cv.remap(testRight,
             cv.BORDER_CONSTANT,
             0)
 
-cv.imshow('Left_nice', Left_nice)
-cv.imshow('Right_nice', Right_nice)
+print(retL, retR, retStereo)
+
+conc_frame = np.concatenate((Left_nice, Right_nice), axis=1)
+for i in range(0, conc_frame.shape[0], int(conc_frame.shape[0]/20)):
+    cv.line(conc_frame, (0,i), (conc_frame.shape[1],i), (255,0,0), 1)
+
+cv.imshow('conc_frame', conc_frame)
+
 cv.waitKey(0)

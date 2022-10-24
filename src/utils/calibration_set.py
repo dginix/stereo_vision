@@ -44,9 +44,11 @@ cam_left = cv2.VideoCapture(2)
 
 cam_right.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
 cam_right.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+cam_right.set(cv2.CAP_PROP_AUTOFOCUS, 0)
 
 cam_left.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
 cam_left.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+cam_left.set(cv2.CAP_PROP_AUTOFOCUS, 0)
 
 check, frame_right = cam_right.read()
 text_filed = init_text_field(frame_right)
